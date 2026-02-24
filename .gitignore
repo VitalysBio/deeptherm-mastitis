@@ -205,3 +205,43 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+
+# --- Project: DeepTherm-Mastitis (data & artifacts) ---
+# Never commit raw data
+data/raw/
+data/interim/
+
+# We do commit lightweight CSV manifests and splits
+# so DO NOT ignore data/processed/*.csv
+# But ignore any binaries that could end up there
+data/processed/**/*.zip
+data/processed/**/*.jpg
+data/processed/**/*.jpeg
+data/processed/**/*.png
+data/processed/**/*.tif
+data/processed/**/*.tiff
+
+# Extra safety: ignore images anywhere in the repo (dataset should never be committed)
+**/*.jpg
+**/*.jpeg
+**/*.png
+**/*.tif
+**/*.tiff
+**/*.zip
+
+# Model artifacts
+**/*.pt
+**/*.pth
+**/*.onnx
+
+# Logs and outputs
+logs/
+runs/
+outputs/
+
+# OS
+Thumbs.db
+.DS_Store
+
+# VS Code local settings
+.vscode/
