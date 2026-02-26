@@ -238,6 +238,7 @@ data/processed/**/*.tiff
 logs/
 runs/
 outputs/
+reports/runs/
 
 # OS
 Thumbs.db
