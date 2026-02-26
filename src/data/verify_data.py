@@ -21,8 +21,8 @@ def detect_view_from_path(p: Path):
     s = str(p).lower()
     if "full" in s:
         return "full"
-    if "roi" in s:
-        return "roi"
+    if "crop" in s:
+        return "cropped"
     return "unknown"
 
 
