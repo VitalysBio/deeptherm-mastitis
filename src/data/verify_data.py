@@ -12,8 +12,8 @@ def detect_label_from_path(p: Path):
     parts = [x.lower() for x in p.parts]
     if "healthy" in parts:
         return "healthy"
-    if "scm" in parts or "mastitis" in parts:
-        return "scm"
+    if "SCM" in parts or "mastitis" in parts:
+        return "SCM"
     return "unknown"
 
 
