@@ -100,6 +100,7 @@ def main():
     ap.add_argument("--batch_size", type=int, default=32)
     ap.add_argument("--thr", type=float, default=0.5)
     ap.add_argument("--out_dir", type=str, default="test_results")
+    ap.add_argument("--phase", type=str, required=True, choices=["head","finetune"])
     args = ap.parse_args()
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -124,8 +125,13 @@ def main():
     print(f"Test size: {len(test_ds)}")
 
     for run in run_folders:
-
-        ckpt_path = run / "best_finetune.pt"
+        if args.phase == "finetune":
+            ckpt_path = run / "best_finetune.pt"
+        elif args.phase == "head":
+            ckpt_path = run / "best_head.pt"
+        else:
+            raise ValueError("phase must be 'head' or 'finetune'")
+        
         if not ckpt_path.exists():
             continue
 
