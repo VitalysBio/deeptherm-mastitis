@@ -23,7 +23,7 @@ def find_image(path_root: Path, label_folder: str, image_id: int) -> Path | None
 
 
 def resolve_paths_for_id(image_id: int, label: int):
-    label_folder = "scm" if int(label) == 1 else "healthy"
+    label_folder = "SCM" if int(label) == 1 else "healthy"
 
     full_path = find_image(FULL_DIR, label_folder, image_id)
     crop_path = find_image(CROP_DIR, label_folder, image_id)
