@@ -21,7 +21,7 @@ from sklearn.metrics import (
 )
 
 from src.models.dataset import DatasetConfig, TIDSMastitisDataset
-from src.models.transforms import get_transforms_thermal
+from src.models.transforms_thermal import get_transforms_thermal
 
 
 

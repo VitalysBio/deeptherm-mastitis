@@ -23,7 +23,7 @@ import torch.nn as nn
 from torch.utils.data import DataLoader
 
 from src.models.dataset import DatasetConfig, TIDSMastitisDataset
-from src.models.transforms import get_transforms_thermal
+from src.models.transforms_thermal import get_transforms_thermal
 
 from datetime import datetime
 import json
