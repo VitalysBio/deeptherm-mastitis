@@ -21,7 +21,7 @@ from sklearn.metrics import (
 )
 
 from src.models.dataset import DatasetConfig, TIDSMastitisDataset
-from src.models.transforms import get_transforms
+from src.models.transforms import get_transforms_thermal
 
 
 
@@ -109,7 +109,7 @@ def main():
 
     test_ds = TIDSMastitisDataset(
         DatasetConfig(project_root, csv_path, image_view=args.image_view, split="test", fold=None, mode="test"),
-        transform=get_transforms("test"),
+        transform=get_transforms_thermal("test"),
     )
 
     test_loader = DataLoader(test_ds, batch_size=args.batch_size, shuffle=False, num_workers=0)

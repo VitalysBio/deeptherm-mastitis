@@ -23,7 +23,7 @@ import torch.nn as nn
 from torch.utils.data import DataLoader
 
 from src.models.dataset import DatasetConfig, TIDSMastitisDataset
-from src.models.transforms import get_transforms
+from src.models.transforms import get_transforms_thermal
 
 from datetime import datetime
 import json
@@ -230,11 +230,11 @@ def train_one_fold(
 
     train_ds = TIDSMastitisDataset(
         DatasetConfig(project_root, csv_path, image_view=image_view, split="train", fold=fold, mode="train"),
-        transform=get_transforms("train"),
+        transform=get_transforms_thermal("train"),
     )
     val_ds = TIDSMastitisDataset(
         DatasetConfig(project_root, csv_path, image_view=image_view, split="train", fold=fold, mode="val"),
-        transform=get_transforms("val"),
+        transform=get_transforms_thermal("val"),
     )
 
     train_loader = DataLoader(train_ds, batch_size=batch_size, shuffle=True, num_workers=2)
