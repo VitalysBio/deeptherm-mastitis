@@ -245,7 +245,7 @@ def train_one_fold(
 
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     run_name = f"densenet121_{image_view}_fold{fold}_{timestamp}"
-    run_dir = project_root / "reports" / "runs" / run_name
+    run_dir = project_root / "reports" / "runs_thermal" / run_name
     run_dir.mkdir(parents=True, exist_ok=True)
 
     print(f"Device: {device}")
