@@ -19,6 +19,13 @@ def parse_fold_from_name(name: str):
     m = re.search(r"fold(\d+)", name)
     return int(m.group(1)) if m else None
 
+def disable_inplace_relu(module: nn.Module):
+    for child_name, child in module.named_children():
+        if isinstance(child, nn.ReLU):
+            setattr(module, child_name, nn.ReLU(inplace=False))
+        else:
+            disable_inplace_relu(child)
+
 
 def build_model(device: torch.device):
     from torchvision.models import densenet121, DenseNet121_Weights
@@ -29,8 +36,10 @@ def build_model(device: torch.device):
 
     in_features = model.classifier.in_features
     model.classifier = nn.Linear(in_features, 1)
-    return model.to(device)
 
+    disable_inplace_relu(model)
+
+    return model.to(device)
 
 def denormalize_imagenet(img_tensor: torch.Tensor) -> np.ndarray:
     mean = torch.tensor([0.485, 0.456, 0.406], dtype=img_tensor.dtype).view(3, 1, 1)
@@ -72,24 +81,30 @@ def gradcam_for_model(model, x, device):
     activations = []
     gradients = []
 
+    # mejor usar una capa final concreta de DenseNet
+    target_layer = model.features.norm5
+
     def forward_hook(module, inp, out):
         activations.append(out)
 
-    def backward_hook(module, grad_in, grad_out):
-        gradients.append(grad_out[0])
+    def backward_hook(module, grad_input, grad_output):
+        gradients.append(grad_output[0])
 
-    hook_f = model.features.register_forward_hook(forward_hook)
-    hook_b = model.features.register_full_backward_hook(backward_hook)
+    hook_f = target_layer.register_forward_hook(forward_hook)
+    hook_b = target_layer.register_full_backward_hook(backward_hook)
+
+    x = x.unsqueeze(0).to(device)
+    x.requires_grad_(True)
 
     model.zero_grad()
-    logits = model(x.unsqueeze(0).to(device)).squeeze(1)
+    logits = model(x).squeeze(1)
     prob = torch.sigmoid(logits)[0].item()
 
     score = logits[0]
-    score.backward(retain_graph=True)
+    score.backward()
 
-    A = activations[0]
-    dA = gradients[0]
+    A = activations[0]          # [1, C, H, W]
+    dA = gradients[0]           # [1, C, H, W]
 
     weights = dA.mean(dim=(2, 3), keepdim=True)
     cam = (weights * A).sum(dim=1)[0]
@@ -102,12 +117,11 @@ def gradcam_for_model(model, x, device):
     if cam.max() > 0:
         cam = cam / cam.max()
 
-    H, W = x.shape[1], x.shape[2]
+    H, W = x.shape[2], x.shape[3]
     cam_img = Image.fromarray((cam * 255).astype(np.uint8)).resize((W, H), resample=Image.BILINEAR)
     cam = np.array(cam_img).astype(np.float32) / 255.0
 
     return cam, prob
-
 
 def main():
     ap = argparse.ArgumentParser()
