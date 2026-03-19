@@ -18,6 +18,8 @@ from sklearn.metrics import (
 )
 
 
+# Metrics
+
 def compute_metrics(y_true, probs, thr=0.5):
     y_pred = (probs >= thr).astype(int)
 
@@ -45,11 +47,13 @@ def format_mean_sd(mean_val, sd_val, digits=3):
     return f"{mean_val:.{digits}f} ± {sd_val:.{digits}f}"
 
 
+
+# Build main table
+
 def build_main_table(per_fold_df, ens_metrics, digits=3):
     metrics_to_show = ["f1", "precision", "recall", "pr_auc", "roc_auc", "mcc", "acc"]
 
     rows = []
-
     per_fold_df = per_fold_df.sort_values("fold").reset_index(drop=True)
 
     for _, row in per_fold_df.iterrows():
@@ -98,9 +102,16 @@ def build_main_table(per_fold_df, ens_metrics, digits=3):
     return pd.DataFrame(rows)
 
 
-def save_table_figure(table_df, out_path, title="Test set performance across folds and ensemble"):
-    fig_height = 0.75 * len(table_df) + 1.5
-    fig, ax = plt.subplots(figsize=(13, fig_height))
+
+# Web styled table figure
+
+def save_table_figure(table_df, out_path, title=None):
+    fig_height = 0.62 * len(table_df) + 1.0
+    fig, ax = plt.subplots(figsize=(12.5, fig_height))
+
+    # Fondo transparente
+    fig.patch.set_alpha(0)
+    ax.set_facecolor("none")
     ax.axis("off")
 
     table = ax.table(
@@ -112,71 +123,153 @@ def save_table_figure(table_df, out_path, title="Test set performance across fol
 
     table.auto_set_font_size(False)
     table.set_fontsize(11)
-    table.scale(1, 1.7)
+    table.scale(1.0, 1.45)
 
+    n_rows = len(table_df)
     n_cols = len(table_df.columns)
 
+
     for (row, col), cell in table.get_celld().items():
-        if row == 0:
-            cell.set_text_props(weight="bold")
-            cell.set_height(0.12)
-        else:
-            cell.set_height(0.10)
+        cell.set_linewidth(0)
+        cell.set_edgecolor("black")
+        cell.set_facecolor((1, 1, 1, 0))
 
-    mean_row_idx = len(table_df) - 1
-    ensemble_row_idx = len(table_df)
-
-    
-    mean_table_row = list(table_df["Model"]).index("Mean ± SD") + 1
-    ensemble_table_row = list(table_df["Model"]).index("Ensemble") + 1
 
     for col in range(n_cols):
-        table[(mean_table_row, col)].set_text_props(weight="bold")
-        table[(ensemble_table_row, col)].set_text_props(weight="bold")
+        cell = table[(0, col)]
+        cell.visible_edges = "TB"
+        cell.set_linewidth(1.2)
+        cell.set_text_props(weight="bold", color="black")
+        cell.set_height(0.12)
 
-    plt.title(title, fontsize=13, weight="bold", pad=15)
+ 
+    for row in range(1, n_rows + 1):
+        for col in range(n_cols):
+            cell = table[(row, col)]
+            cell.visible_edges = "B"
+            cell.set_linewidth(0.7)
+            cell.set_height(0.105)
+
+  
+    mean_row = list(table_df["Model"]).index("Mean ± SD") + 1
+    for col in range(n_cols):
+        table[(mean_row, col)].set_text_props(weight="bold")
+
+   
+    ensemble_row = list(table_df["Model"]).index("Ensemble") + 1
+    for col in range(n_cols):
+        table[(ensemble_row, col)].set_text_props(weight="bold")
+
+  
+    recall_col = list(table_df.columns).index("Recall")
+    table[(ensemble_row, recall_col)].set_text_props(weight="bold")
+
+    if title:
+        plt.title(title, fontsize=13, weight="bold", pad=12)
+
     plt.tight_layout()
-    plt.savefig(out_path, dpi=300, bbox_inches="tight")
+    plt.savefig(
+        out_path,
+        dpi=300,
+        bbox_inches="tight",
+        transparent=True,
+        pad_inches=0.03
+    )
     plt.close()
 
 
-def save_confusion_matrix_figure(y_true, probs, thr, out_path, title="Ensemble confusion matrix"):
+
+# Web styled confusion matrix
+
+def save_confusion_matrix_figure(
+    y_true,
+    probs,
+    thr,
+    out_path,
+    title=None,
+    class_names=("Healthy", "SCM"),
+):
     y_pred = (probs >= thr).astype(int)
     cm = confusion_matrix(y_true, y_pred, labels=[0, 1])
 
-    fig, ax = plt.subplots(figsize=(5.5, 5))
+    fig, ax = plt.subplots(figsize=(5.8, 5.2))
+
+   
+    fig.patch.set_alpha(0)
+    ax.set_facecolor("none")
+
     im = ax.imshow(cm, interpolation="nearest")
-    plt.colorbar(im, ax=ax, fraction=0.046, pad=0.04)
 
-    ax.set(
-        xticks=np.arange(2),
-        yticks=np.arange(2),
-        xticklabels=["Pred 0", "Pred 1"],
-        yticklabels=["True 0", "True 1"],
-        xlabel="Predicted label",
-        ylabel="True label",
-        title=title,
-    )
+    
+    cbar = plt.colorbar(im, ax=ax, fraction=0.046, pad=0.04)
+    cbar.ax.tick_params(labelsize=10)
 
+    ax.set_xticks(np.arange(2))
+    ax.set_yticks(np.arange(2))
+    ax.set_xticklabels([f"Pred {class_names[0]}", f"Pred {class_names[1]}"], fontsize=11)
+    ax.set_yticklabels([f"True {class_names[0]}", f"True {class_names[1]}"], fontsize=11)
+    ax.set_xlabel("Predicted class", fontsize=11)
+    ax.set_ylabel("True class", fontsize=11)
+
+    if title:
+        ax.set_title(title, fontsize=13, weight="bold", pad=10)
+
+    
+    threshold = cm.max() / 2.0 if cm.max() > 0 else 0
     for i in range(cm.shape[0]):
         for j in range(cm.shape[1]):
-            ax.text(j, i, str(cm[i, j]), ha="center", va="center", fontsize=12, weight="bold")
+            ax.text(
+                j,
+                i,
+                f"{cm[i, j]}",
+                ha="center",
+                va="center",
+                fontsize=14,
+                weight="bold",
+                color="white" if cm[i, j] > threshold else "black",
+            )
 
+   
+    for spine in ax.spines.values():
+        spine.set_visible(False)
+
+    ax.set_aspect("equal")
     plt.tight_layout()
-    plt.savefig(out_path, dpi=300, bbox_inches="tight")
+    plt.savefig(
+        out_path,
+        dpi=300,
+        bbox_inches="tight",
+        transparent=True,
+        pad_inches=0.03
+    )
     plt.close()
 
     return cm
 
 
+
+# Main
+
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--input_dir", type=str, required=True,
-                    help="Carpeta donde están test_per_fold.csv y test_ensemble_predictions.csv")
-    ap.add_argument("--out_dir", type=str, required=True,
-                    help="Carpeta de salida para tabla y figuras")
+    ap.add_argument(
+        "--input_dir",
+        type=str,
+        required=True,
+        help="Carpeta donde están test_per_fold.csv y test_ensemble_predictions.csv",
+    )
+    ap.add_argument(
+        "--out_dir",
+        type=str,
+        required=True,
+        help="Carpeta de salida para tabla y figuras",
+    )
     ap.add_argument("--thr", type=float, default=0.5)
     ap.add_argument("--digits", type=int, default=3)
+
+    
+    ap.add_argument("--show_titles", action="store_true")
+
     args = ap.parse_args()
 
     input_dir = Path(args.input_dir)
@@ -213,34 +306,35 @@ def main():
 
     table_df = build_main_table(per_fold_df, ens_metrics, digits=args.digits)
 
-    # Guardar tabla en CSV y Excel
+   
     table_df.to_csv(out_dir / "test_results_main_table.csv", index=False)
     try:
         table_df.to_excel(out_dir / "test_results_main_table.xlsx", index=False)
     except Exception as e:
         print(f"No se pudo guardar Excel: {e}")
 
-    # Guardar figura de tabla
+    
     save_table_figure(
-        table_df,
-        out_dir / "test_results_main_table.png",
-        title="Test set performance across folds, mean ± SD, and ensemble"
+        table_df=table_df,
+        out_path=out_dir / "test_results_main_table.png",
+        title="Test set performance" if args.show_titles else None,
     )
 
-    # Guardar matriz de confusión
+    
     cm = save_confusion_matrix_figure(
-        ensemble_df["y_true"].values,
-        ensemble_df["prob_ensemble"].values,
+        y_true=ensemble_df["y_true"].values,
+        probs=ensemble_df["prob_ensemble"].values,
         thr=args.thr,
         out_path=out_dir / "ensemble_confusion_matrix.png",
-        title=f"Ensemble confusion matrix, threshold = {args.thr}"
+        title=f"Ensemble confusion matrix, threshold={args.thr}" if args.show_titles else None,
+        class_names=("Healthy", "SCM"),
     )
 
-    # Guardar matriz como CSV
+    
     cm_df = pd.DataFrame(
         cm,
-        index=["True 0", "True 1"],
-        columns=["Pred 0", "Pred 1"]
+        index=["True Healthy", "True SCM"],
+        columns=["Pred Healthy", "Pred SCM"]
     )
     cm_df.to_csv(out_dir / "ensemble_confusion_matrix.csv")
 
