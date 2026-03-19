@@ -19,13 +19,6 @@ def parse_fold_from_name(name: str):
     m = re.search(r"fold(\d+)", name)
     return int(m.group(1)) if m else None
 
-def disable_inplace_relu(module: nn.Module):
-    for child_name, child in module.named_children():
-        if isinstance(child, nn.ReLU):
-            setattr(module, child_name, nn.ReLU(inplace=False))
-        else:
-            disable_inplace_relu(child)
-
 
 def build_model(device: torch.device):
     from torchvision.models import densenet121, DenseNet121_Weights
@@ -36,8 +29,6 @@ def build_model(device: torch.device):
 
     in_features = model.classifier.in_features
     model.classifier = nn.Linear(in_features, 1)
-
-    disable_inplace_relu(model)
 
     return model.to(device)
 
@@ -75,14 +66,16 @@ def make_input_tensor(img_path: Path):
     return x
 
 
+import torch.nn.functional as F
+
 def gradcam_for_model(model, x, device):
     model.eval()
 
     activations = []
     gradients = []
 
-    # mejor usar una capa final concreta de DenseNet
-    target_layer = model.features.norm5
+    # capa objetivo final de DenseNet
+    target_layer = model.features
 
     def forward_hook(module, inp, out):
         activations.append(out)
@@ -97,14 +90,21 @@ def gradcam_for_model(model, x, device):
     x.requires_grad_(True)
 
     model.zero_grad()
-    logits = model(x).squeeze(1)
+
+    # FORWARD MANUAL para evitar el inplace=True del forward original de DenseNet
+    features = model.features(x)
+    out = F.relu(features, inplace=False)
+    out = F.adaptive_avg_pool2d(out, (1, 1))
+    out = torch.flatten(out, 1)
+    logits = model.classifier(out).squeeze(1)
+
     prob = torch.sigmoid(logits)[0].item()
 
     score = logits[0]
     score.backward()
 
-    A = activations[0]          # [1, C, H, W]
-    dA = gradients[0]           # [1, C, H, W]
+    A = activations[0]      # [1, C, H, W]
+    dA = gradients[0]       # [1, C, H, W]
 
     weights = dA.mean(dim=(2, 3), keepdim=True)
     cam = (weights * A).sum(dim=1)[0]
